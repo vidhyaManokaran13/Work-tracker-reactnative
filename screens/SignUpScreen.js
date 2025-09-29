@@ -140,7 +140,7 @@ export default function SignUpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f7f9fc', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  container: { flex: 1, backgroundColor: '#E7EEFA', alignItems: 'center', justifyContent: 'center', padding: 20 },
   logoContainer: { alignItems: 'center', marginBottom: 30 },
   logo: {     flexDirection: "row",
     alignItems: "center",

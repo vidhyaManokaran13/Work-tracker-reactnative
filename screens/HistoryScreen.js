@@ -1,4 +1,4 @@
-// screens/HistoryScreen.js
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -229,7 +229,7 @@ export default function HistoryScreen() {
             {search.trim() ? "Matched Sessions" : "Today’s Sessions"}
           </Text>
         </View>
-        <View style={[styles.statsCard, { backgroundColor: "#e6f7ef" }]}>
+        <View style={[styles.statsCard, { backgroundColor: "#fff" }]}>
           <Text style={[styles.statsNumber, { color: "#059669" }]}>
             {formatTime(totalTime)}
           </Text>
@@ -237,7 +237,7 @@ export default function HistoryScreen() {
             {search.trim() ? "Matched Time" : "Today’s Time"}
           </Text>
         </View>
-        <View style={[styles.statsCard, { backgroundColor: "#fff7ed" }]}>
+        <View style={[styles.statsCard, { backgroundColor: "#fff" }]}>
           <Text style={[styles.statsNumber, { color: "#d97706" }]}>
             {formatTime(avgTime)}
           </Text>
@@ -310,7 +310,7 @@ export default function HistoryScreen() {
 
   return (
     <FlatList
-      data={[]} // only header
+      data={[]} // only header we use this 
       ListHeaderComponent={renderHeader}
       contentContainerStyle={{ padding: 12, paddingBottom: 120 }}
     />
@@ -320,6 +320,7 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   statsContainer: {
     marginBottom: 12,
+     
   },
   statsCard: {
     backgroundColor: "#fff",
@@ -378,12 +379,12 @@ const styles = StyleSheet.create({
   entriesCount: { fontSize: 12, color: "#6b7280" },
 
  entryBlock: {
-  backgroundColor: "#fafafa", // slightly gray so it separates from white background
+  backgroundColor: "#fafafa", // sesstion cared background we use gray for differentiation
   borderRadius: 10,
   padding: 12,
   marginBottom: 12,
-  elevation: 2, // stronger shadow
-  shadowColor: "#000", // iOS shadow
+  elevation: 2, // shadow for the card
+  shadowColor: "#000", 
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.8,
   shadowRadius: 2,

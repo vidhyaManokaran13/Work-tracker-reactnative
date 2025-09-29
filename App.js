@@ -29,11 +29,10 @@ import { TimerProvider, TimerContext } from "./context/TimerContext";
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
-
-// Navigation ref for logout
+//if the user logout they will be redirected to sign in screen
 export const navigationRef = createNavigationContainerRef();
 
-// ✅ SVG ICON COMPONENTS
+// menu bar having svg componennts
 const DashboardIcon = ({ size = 22, color = "#111827" }) => (
   <Svg
     xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +99,7 @@ const LogoutIcon = ({ size = 22, color = "#dc2626" }) => (
   </Svg>
 );
 
-// Dashboard Header
+// menu bar have header this one for dahborad
 function DashboardHeader({ userName }) {
   return (
     <View style={styles.headerContainer}>
@@ -123,7 +122,7 @@ function DashboardHeader({ userName }) {
       <View style={{ marginLeft: 10 }}>
         <Text style={styles.headerTitle}>Work Tracker</Text>
         <Text style={styles.headerSubtitle}>
-          Welcome back, {userName || "..."}
+          Welcome back, {userName || "..."}  {/* it display the user name in header*/}
         </Text>
       </View>
     </View>
@@ -163,10 +162,10 @@ function HistoryHeader() {
 // Custom Drawer
 function CustomDrawerContent(props) {
   const { state, navigation } = props;
-  const currentRoute = state.routeNames[state.index];
+  const currentRoute = state.routeNames[state.index];//to highlight the current route
   const { setTotalTime, setSessions } = useContext(TimerContext);
 
-  // Reset Today logic
+  // it shows the warnig and reset the today working hours no need extra js file
   const handleResetToday = async () => {
     const user = auth.currentUser;
     if (!user) return;
@@ -207,7 +206,7 @@ function CustomDrawerContent(props) {
     ]);
   };
 
-  // Logout logic
+  // Logout after click logout it redirect to sign in screen  no need any extra js file
   const handleLogout = () => {
     Alert.alert("Confirm Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
@@ -329,7 +328,7 @@ export default function App() {
     <TimerProvider>
       <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
-          initialRouteName="SignUp"
+          initialRouteName="SignIn"
           screenOptions={{ headerShown: false }}
         >
           <Stack.Screen name="SignUp" component={SignUpScreen} />

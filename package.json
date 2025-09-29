@@ -26,6 +26,8 @@
     "react": "19.1.0",
     "react-native": "0.81.4",
     "react-native-background-timer": "^2.4.1",
+    "react-native-dotenv": "^3.4.11",
+    "react-native-geocoding": "^0.5.0",
     "react-native-geolocation-service": "^5.3.1",
     "react-native-gesture-handler": "^2.28.0",
     "react-native-get-location": "^5.0.0",

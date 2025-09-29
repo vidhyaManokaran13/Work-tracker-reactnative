@@ -1,3 +1,6 @@
+//it fetch local location corecty humand readble form no api need only package fetched
+
+
 import React, { useEffect, useState, useRef, useContext } from "react";
 import {
   View,
@@ -8,6 +11,7 @@ import {
   Alert,
   PermissionsAndroid,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, db } from "../firebase";
@@ -23,22 +27,23 @@ import {
 } from "firebase/firestore";
 import { TimerContext } from "../context/TimerContext";
 import Svg, { Path, Circle } from "react-native-svg";
-import {Geolocation} from "react-native-geolocation-service";
+import Geolocation from "@react-native-community/geolocation";
 
 export default function HomeScreen({ navigation }) {
   const [userName, setUserName] = useState("");
   const [startTime, setStartTime] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-
-  const { totalTime, setTotalTime, sessions, setSessions } = useContext(TimerContext);
-
-  const [ipAddress, setIpAddress] = useState("Fetching...");
   const [location, setLocation] = useState("Fetching...");
+  const [ipAddress, setIpAddress] = useState("Fetching...");
+  const [loadingAddress, setLoadingAddress] = useState(false);
+
+  const { totalTime, setTotalTime, sessions, setSessions } =
+    useContext(TimerContext);
 
   const intervalRef = useRef(null);
 
-  // Ask runtime location permission
+  // it will aske location permition 
   async function requestLocationPermission() {
     try {
       if (Platform.OS === "android") {
@@ -62,9 +67,53 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
-  // Fetch IP + location
-  const fetchIpAndLocation = async () => {
-    // IP
+  // Fetch location and address of code 
+  const fetchLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      setLocation("Permission denied");
+      return;
+    }
+
+    setLoadingAddress(true);
+
+    Geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+
+        // it get the latitude and longtitude 
+        setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+
+        // Fetch the address from geolocation
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+            {
+              headers: {
+                "User-Agent": "ReactNativeApp",
+                "Accept-Language": "en",
+              },
+            }
+          );
+          const data = await response.json();
+          if (data.display_name) setLocation(data.display_name);
+        } catch (err) {
+          console.log("Reverse geocoding error:", err);
+        } finally {
+          setLoadingAddress(false);
+        }
+      },
+      (error) => {
+        console.log("Location error:", error);
+        setLocation("Unavailable");
+        setLoadingAddress(false);
+      },
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 10000 }
+    );
+  };
+
+  // Fetch IP address fetching 
+  const fetchIpAddress = async () => {
     try {
       const res = await fetch("https://api.ipify.org?format=json");
       const data = await res.json();
@@ -72,28 +121,9 @@ export default function HomeScreen({ navigation }) {
     } catch {
       setIpAddress("Unavailable");
     }
-
-    // Location
-    const hasPermission = await requestLocationPermission();
-    if (!hasPermission) {
-      setLocation("Permission denied");
-      return;
-    }
-
-    Geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-      },
-      (error) => {
-        console.log("Location error:", error);
-        setLocation("Unavailable");
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
   };
 
-  // Fetch user + today’s sessions
+  // fetch the username and location from the auth and firestore
   useEffect(() => {
     const fetchUserAndSessions = async () => {
       try {
@@ -135,11 +165,10 @@ export default function HomeScreen({ navigation }) {
     };
 
     fetchUserAndSessions();
-    fetchIpAndLocation();
-    restoreSession(); // restore ongoing session if app was closed
+    fetchIpAddress();
+    restoreSession();
   }, []);
 
-  // Restore session if app was closed
   const restoreSession = async () => {
     try {
       const storedStart = await AsyncStorage.getItem("currentSessionStart");
@@ -153,7 +182,7 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  // Timer effect
+  // Timer logic for count the time
   useEffect(() => {
     if (isRunning && startTime) {
       intervalRef.current = setInterval(() => {
@@ -164,7 +193,7 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(intervalRef.current);
   }, [isRunning, startTime]);
 
-  // Reset at midnight
+  // after midnight the timer will reset 0 
   useEffect(() => {
     const checkMidnight = setInterval(() => {
       const today = new Date().toDateString();
@@ -195,7 +224,7 @@ export default function HomeScreen({ navigation }) {
     if (!user) return;
 
     if (isRunning) {
-      // STOP
+      // stop session it will stop the session and save the data to firestore 
       const sessionDuration = Date.now() - startTime.getTime();
       const endTime = new Date();
 
@@ -220,19 +249,22 @@ export default function HomeScreen({ navigation }) {
         Alert.alert("Error", "Failed to save session. Please try again.");
       }
     } else {
+      // start the session it will start the session and save the start time to asyncstorage
       const now = new Date();
       setStartTime(now);
       setIsRunning(true);
       await AsyncStorage.setItem("currentSessionStart", now.toISOString());
-      fetchIpAndLocation();
+
+      // Fetch location once at start the time 
+      fetchLocation();
+      fetchIpAddress();
     }
   };
 
   const displayTime = isRunning ? totalTime + elapsed : totalTime;
+
   return (
     <ScrollView style={styles.container}>
- 
-
       {/* Current Status */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -254,9 +286,11 @@ export default function HomeScreen({ navigation }) {
 
         <Text style={styles.timer}>{formatTime(displayTime)}</Text>
         <Text style={styles.totalText}>
-         Total time worked today {isRunning ? "(including current session)" : ""}
+          Total time worked today {isRunning ? "(including current session)" : ""}
         </Text>
-        <Text style={styles.sessionsText}>{sessions} session(s) completed today</Text>
+        <Text style={styles.sessionsText}>
+          {sessions} session(s) completed today
+        </Text>
 
         <TouchableOpacity
           style={[styles.button, isRunning ? styles.stopButton : styles.startButton]}
@@ -273,9 +307,7 @@ export default function HomeScreen({ navigation }) {
               <Path d="M10 8L16 12L10 16V8Z" fill="white" />
             </Svg>
           )}
-          <Text style={styles.buttonText}>
-            {isRunning ? "Stop Work" : "Start Work"}
-          </Text>
+          <Text style={styles.buttonText}>{isRunning ? "Stop Work" : "Start Work"}</Text>
         </TouchableOpacity>
       </View>
 
@@ -319,7 +351,11 @@ export default function HomeScreen({ navigation }) {
               </Svg>
               <Text style={styles.detailLabel}>Location</Text>
             </View>
-            <Text style={styles.detailValue}>{location}</Text>
+            {loadingAddress ? (
+              <ActivityIndicator size="small" color="#2563eb" style={{ marginTop: 4 }} />
+            ) : (
+              <Text style={styles.detailValue}>{location}</Text>
+            )}
           </View>
 
           {/* IP Address */}
@@ -394,100 +430,32 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f7f9fc", padding: 16 },
+  container: { flex: 1, backgroundColor: "#E7EEFA", padding: 16 },
   headerRow: { flexDirection: "row", alignItems: "center", marginTop: 20 },
-  appTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#111827",
-    marginLeft: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6b7280",
-    textAlign: "center",
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 3,
-  },
+  appTitle: { fontSize: 24, fontWeight: "bold", color: "#111827", marginLeft: 12 },
+  subtitle: { fontSize: 16, color: "#6b7280", textAlign: "center" },
+  card: { backgroundColor: "#fff", borderRadius: 12, padding: 16, marginVertical: 10, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 }, shadowRadius: 6, elevation: 3 },
   cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   cardTitle: { fontSize: 18, fontWeight: "bold", color: "#111827" },
   cardSubtitle: { fontSize: 14, color: "#6b7280", marginBottom: 12 },
-  timer: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#2563eb",
-    textAlign: "center",
-  },
-  totalText: {
-    fontSize: 14,
-    color: "#374151",
-    textAlign: "center",
-    marginTop: 4,
-  },
-  sessionsText: {
-    fontSize: 13,
-    color: "#6b7280",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  button: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginTop: 10,
-  },
+  timer: { fontSize: 36, fontWeight: "bold", color: "#2563eb", textAlign: "center" },
+  totalText: { fontSize: 14, color: "#374151", textAlign: "center", marginTop: 4 },
+  sessionsText: { fontSize: 13, color: "#6b7280", textAlign: "center", marginBottom: 12 },
+  button: { flexDirection: "row", justifyContent: "center", alignItems: "center", borderRadius: 8, paddingVertical: 12, marginTop: 10 },
   startButton: { backgroundColor: "#2563eb" },
   stopButton: { backgroundColor: "#dc2626" },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#111827",
-  },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold", marginLeft: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10, color: "#111827" },
   detailBlock: { marginVertical: 8 },
   detailRow: { flexDirection: "row", alignItems: "center" },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#111827",
-    marginLeft: 8,
-  },
-  detailValue: {
-    fontSize: 13,
-    color: "#6b7280",
-    marginLeft: 26,
-    marginTop: 2,
-  },
+  detailLabel: { fontSize: 14, fontWeight: "bold", color: "#111827", marginLeft: 8 },
+  detailValue: { fontSize: 13, color: "#6b7280", marginLeft: 26, marginTop: 2 },
   overviewContainer: { marginTop: 8 },
-  overviewRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 8,
-  },
+  overviewRow: { flexDirection: "row", justifyContent: "space-between", marginVertical: 8 },
   overviewCol: { flex: 0.48, alignItems: "center" },
   overviewValue: { fontSize: 20, fontWeight: "bold" },
   overviewLabel: { fontSize: 14, color: "#6b7280" },
-  logo: {
-    backgroundColor: "#2563eb",
-    borderRadius: 20,
-    padding: 10,
-    marginBottom:10,
-  },
+  logo: { backgroundColor: "#2563eb", borderRadius: 20, padding: 10, marginBottom: 10 },
 });
+
+

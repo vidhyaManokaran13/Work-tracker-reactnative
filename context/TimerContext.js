@@ -1,13 +1,12 @@
-// context/TimerContext.js
 import React, { createContext, useState } from "react";
 
 export const TimerContext = createContext();
 
 export const TimerProvider = ({ children }) => {
-  const [totalTime, setTotalTime] = useState(0);      // total ms today
-  const [sessions, setSessions] = useState(0);        // count of sessions
-  const [startTime, setStartTime] = useState(null);   // current start time
-  const [isRunning, setIsRunning] = useState(false);  // running flag
+  const [totalTime, setTotalTime] = useState(0);     
+  const [sessions, setSessions] = useState(0);        
+  const [startTime, setStartTime] = useState(null);  
+  const [isRunning, setIsRunning] = useState(false);  
 
   return (
     <TimerContext.Provider
